@@ -1,0 +1,11 @@
+# Python derlenmiş dosyaları
+__pycache__/
+*.pyc
+*.pyo
+
+# MacOS sistem dosyaları
+.DS_Store
+
+# Virtual environment
+venv/
+env/

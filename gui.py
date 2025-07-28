@@ -53,11 +53,8 @@ def add_excluded_positions():
     for letter in must_include:
         if letter not in excluded_positions_entries:
             row = len(excluded_positions_entries) + 4
-            label = tk.Label(scrollable_frame, text=f"{letter.upper()} Harfinin Hariç Pozisyonları (örnek: 1,3):", name=f"label_{letter}")
-            label.grid(row=row, column=0, sticky="w")
-            entry = tk.Entry(scrollable_frame, width=30)
-            entry.grid(row=row, column=1)
-            excluded_positions_entries[letter] = entry
+            excluded_position = ExcludedPosition(letter, row, scrollable_frame)
+            excluded_positions_entries[letter] = excluded_position
 
     # Dinamik alanlar eklendikten sonra butonları yeniden yerleştir
     reposition_buttons()
@@ -78,8 +75,8 @@ def run_solver():
     excluded_positions = {}
 
     # Hariç tutulacak harf ve pozisyonları al
-    for letter, entry in excluded_positions_entries.items():
-        pos_text = entry.get().strip()
+    for letter, excluded_position in excluded_positions_entries.items():
+        pos_text = excluded_position.entry.get().strip()
         if pos_text:
             excluded_positions[letter] = [int(pos) - 1 for pos in pos_text.split(',') if pos.isdigit()]
 
@@ -91,14 +88,13 @@ def run_solver():
     word_length = len(pattern)
 
     # 1. nltk.words listesini filtrele
+    global nltk_words, wordnet_words
     nltk_words = words.words()
-    filtered_nltk = set(filter_wordlist(nltk_words, word_length, pattern, must_include, must_not_include, excluded_positions))
-
-    # 2. wordnet kelimeleri (lemma isimleri) filtrele
     wordnet_words = set()
     for syn in wordnet.all_synsets():
         for lemma in syn.lemmas():
             wordnet_words.add(lemma.name().lower())
+    filtered_nltk = set(filter_wordlist(nltk_words, word_length, pattern, must_include, must_not_include, excluded_positions))
     filtered_wordnet = set(filter_wordlist(wordnet_words, word_length, pattern, must_include, must_not_include, excluded_positions))
 
     # 3. words.txt listesini oku ve filtrele
@@ -156,31 +152,43 @@ def suggest_words(common_words, word_length):
 
 def clear_all():
     """Tüm giriş alanlarını ve sonuçları temizler."""
-    # Giriş alanlarını temizle
     word_length_entry.delete(0, tk.END)
     must_include_entry.delete(0, tk.END)
     must_not_include_entry.delete(0, tk.END)
     result_text.delete(1.0, tk.END)
 
     # Kelime deseni alanını temizle
-    for widget in pattern_frame.winfo_children():
-        widget.destroy()
+    clear_widgets(pattern_frame)
     global pattern_entries
-    pattern_entries = []  # Desen girişlerini sıfırla
+    pattern_entries = []
 
-    # Hariç tutulacak pozisyon giriş alanlarını ve etiketlerini temizle
-    for letter, entry in excluded_positions_entries.items():
-        entry.destroy()  # Giriş alanını kaldır
-        label = scrollable_frame.nametowidget(f"label_{letter}")  # İlgili etiketi bul
-        label.destroy()  # Etiketi kaldır
-    excluded_positions_entries.clear()  # Sözlüğü sıfırla
+    # Hariç tutulacak pozisyon giriş alanlarını temizle
+    for letter, excluded_position in excluded_positions_entries.items():
+        excluded_position.destroy()
+    excluded_positions_entries.clear()
 
-    # Butonları yeniden yerleştir
     reposition_buttons()
 
 def get_pattern():
     """Deseni Entry alanlarından al ve birleştir."""
     return "".join(entry.get().strip() for entry in pattern_entries)
+
+def clear_widgets(frame):
+    """Belirtilen çerçevedeki tüm widget'ları temizler."""
+    for widget in frame.winfo_children():
+        widget.destroy()
+
+class ExcludedPosition:
+    def __init__(self, letter, row, frame):
+        self.letter = letter
+        self.label = tk.Label(frame, text=f"{letter.upper()} Harfinin Hariç Pozisyonları (örnek: 1,3):")
+        self.label.grid(row=row, column=0, sticky="w")
+        self.entry = tk.Entry(frame, width=30)
+        self.entry.grid(row=row, column=1)
+
+    def destroy(self):
+        self.label.destroy()
+        self.entry.destroy()
 
 # Tkinter arayüzü
 root = tk.Tk()
@@ -221,6 +229,7 @@ generate_pattern_button.grid(row=0, column=2)
 tk.Label(scrollable_frame, text="Kelime Deseni (örnek: _a___):").grid(row=1, column=0, sticky="w")
 pattern_entry = tk.Entry(scrollable_frame, width=30)
 pattern_entry.grid(row=1, column=1)
+pattern_entry.config(state="readonly")
 
 tk.Label(scrollable_frame, text="İçermesi Gereken Harfler (örnek: as):").grid(row=2, column=0, sticky="w")
 must_include_entry = tk.Entry(scrollable_frame, width=30)
