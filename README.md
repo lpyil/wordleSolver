@@ -1,5 +1,6 @@
 req:
 python
+install nltk (pip install nltk)
 
 
 run gui.py
