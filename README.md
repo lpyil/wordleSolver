@@ -1,5 +1,5 @@
 req:
-python
+python,
 install nltk (pip install nltk)
 
 
